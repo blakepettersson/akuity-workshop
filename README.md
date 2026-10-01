@@ -1,23 +1,35 @@
-# Roche Workshop — Kargo + Argo CD on Akuity Platform
+# Akuity Workshop — Kargo + Argo CD on Akuity Platform
 
 Promote a simple NGINX app through `dev → test → prod` using Kargo and Argo CD on the Akuity Platform.
 
 ## Prerequisites
 
-- Akuity account and access to the Argo CD and Kargo instances
-- A Kubernetes cluster registered to Argo CD (an Argo CD agent)
-- A Kargo agent connected to your Kargo instance
+- Akuity account (https://akuity.cloud) and access to the Argo CD and Kargo instances
+- [Kind Cluster](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
+- Access to both Argo CD and Kargo Instance control planes
 - A fork of this repo in your own GitHub account
 - A GitHub personal access token (PAT) with read and write access to your fork
-- CLIs: `akuity`, `kargo`, [`task`](https://taskfile.dev/docs/installation), `envsubst` (`brew install akuity kargo go-task gettext`)
+- CLIs: [`akuity`](https://docs.akuity.io/akuity-portal/automation/#installation), [`kargo`](https://docs.akuity.io/kargo/getting-started/access-kargo-instance#access-kargo-using-the-kargo-cli), [`task`](https://taskfile.dev/docs/installation), [`envsubst`](https://formulae.brew.sh/formula/gettext)
+(`brew install akuity kargo go-task gettext`)
 
 ## Step-by-Step Instructions
 
-### 1. Clone your fork and set up `.env`
+### 1. Create your cluster and connect the agents
 
 ```bash
-git clone https://github.com/<your-github-username>/roche-workshop.git
-cd roche-workshop
+kind create cluster --name <WORKSHOP_NAME>
+```
+
+1. **Argo CD agent**: register this cluster with your Argo CD instance's control plane. Follow [Connect a Kubernetes cluster](https://docs.akuity.io/argocd/getting-started/connect-kubernetes-cluster). Note the cluster name you choose: it's your `ARGOCD_DESTINATION` in `.env`.
+2. **Kargo agent**: create a Kargo agent for your Kargo instance and install it on the same cluster. Follow [Connect a Kargo agent](https://docs.akuity.io/kargo/getting-started/connect-kargo-agent).
+
+Wait until both agents show as **Healthy** in the Akuity Platform UI.
+
+### 2. Clone your fork and set up `.env`
+
+```bash
+git clone https://github.com/<your-github-username>/akuity-workshop.git
+cd akuity-workshop
 cp .env.example .env
 ```
 
@@ -25,14 +37,14 @@ Fill in `.env`. `WORKSHOP_NAME` must be **unique per participant** (for example,
 
 > Never commit `.env`. It contains your PAT.
 
-### 2. Log in and check your config
+### 3. Log in and check your config
 
 ```bash
 akuity login
 task check
 ```
 
-### 3. Create the Argo CD AppProject
+### 4. Create the Argo CD AppProject
 
 ```bash
 task apply-argocd-project
@@ -40,7 +52,7 @@ task apply-argocd-project
 
 This creates the shared `akuity-workshop` AppProject.
 
-### 4. Create the Argo CD Applications
+### 5. Create the Argo CD Applications
 
 ```bash
 task apply-applicationset
@@ -52,7 +64,7 @@ In the Argo CD dashboard you should see three Applications:
 
 They show as **Unknown** and aren't synced. That's expected: each one points at a `stage/<env>` branch that doesn't exist yet. Kargo creates those branches when you promote.
 
-### 5. Create the Kargo resources
+### 6. Create the Kargo resources
 
 ```bash
 task apply-kargo
@@ -70,9 +82,9 @@ This applies, in order:
 
 The pipeline is ready. Freight discovered by the Warehouse can now be promoted through the stages.
 
-> Tip: `task setup` runs steps 2–5 in one go.
+> Tip: `task setup` runs steps 3–6 in one go.
 
-### 6. Your first promotion
+### 7. Your first promotion
 
 1. **dev**: in the Kargo UI, drag the Freight onto the `dev` stage.
 2. **test**: in the Kargo UI, click the truck icon on the `test` stage and pick the Freight.

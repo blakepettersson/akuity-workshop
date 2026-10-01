@@ -26,6 +26,30 @@ tasks:
         done
 
         echo "✓ All required variables are set"
+  
+  check-tools:
+    desc: Check that required CLIs are installed
+    cmds:
+      - |
+        set -e
+
+        for tool in akuity kargo argocd task git envsubst
+        do
+          if ! command -v "$tool" >/dev/null 2>&1; then
+            echo "ERROR: $tool is not installed"
+            exit 1
+          fi
+        done
+
+        akuity version
+        kargo version
+        argocd version --client
+        task --version
+        git --version
+        envsubst --version | head -1
+
+        echo "✓ All required tools are installed"
+
 
   apply-argocd-project:
     desc: Apply shared Argo CD AppProject
@@ -140,3 +164,33 @@ tasks:
       - task: apply-argocd-project
       - task: apply-applicationset
       - task: apply-kargo
+
+  argocd-login:
+    desc: Log in to your Argo CD instance
+    requires:
+      vars: [ARGOCD_SERVER]
+    cmds:
+      - argocd login "$ARGOCD_SERVER" --grpc-web
+  
+  kargo-login:
+    desc: Log in to your Kargo instance
+    requires:
+      vars: [KARGO_SERVER]
+    cmds:
+      - kargo login $KARGO_SERVER
+
+  cleanup-kargo:
+    desc: Delete your Kargo Project and everything in it
+    cmds:
+      - kargo delete project "$WORKSHOP_NAME"
+
+  cleanup-argocd:
+    desc: Delete your ApplicationSet and its Applications
+    cmds:
+      - argocd appset delete "$WORKSHOP_NAME" --yes
+
+  cleanup:
+    desc: Clean up your workshop resources
+    cmds:
+      - task: cleanup-argocd
+      - task: cleanup-kargo
