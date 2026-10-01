@@ -138,9 +138,3 @@ tasks:
       - task: apply-argocd-project
       - task: apply-applicationset
       - task: apply-kargo
-
-
-
-##kargo login gaq379139gqc393z.kargo.akuity.cloud 
-
-## kargo promote --project <kargo project name> --stage prod --freight-alias <alias-name>

@@ -51,7 +51,7 @@ spec:
       as: commit
       config:
         path: ${{ vars.outPath }}
-        message: ${{ outputs['update-image'].commitMessage }}
+        message: ${{ task.outputs.update.commitMessage }}
 
     - uses: git-push
       config:
