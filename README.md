@@ -1,78 +1,70 @@
-# Kargo + Argo CD Workshop
+# Roche Workshop — Kargo + Argo CD on Akuity Platform
 
-This workshop demonstrates a simple GitOps deployment flow using **Akuity Platform, Kargo, Argo CD, GitHub, and Kubernetes**.
+This workshop demonstrates a simple GitOps deployment flow using **GitHub → Kargo → Argo CD → Kubernetes**.
 
-You will deploy an NGINX application through three environments:
+The application used in the workshop is a simple NGINX deployment promoted through three environments:
 
 ```text
-GitHub
-   │
-   ▼
+GitHub main
+     ↓
 Kargo Warehouse
-   │
-   ▼
+     ↓
+Kargo Stages
 dev → test → prod
-   │
-   ▼
+     ↓
+stage/<env> Git branches
+     ↓
 Argo CD
-   │
-   ▼
+     ↓
 Kubernetes
 ```
 
-Kargo is responsible for promoting container image versions between environments, while Argo CD continuously manages the Kubernetes resources.
+Each workshop participant gets their own Kargo Project and destination cluster.
 
----
+## Prerequisites
 
-# Prerequisites
+Make sure the following tools are installed before starting.
 
-Before starting, make sure you have:
+| Tool | Purpose | Installation |
+|---|---|---|
+| [Akuity CLI](https://docs.akuity.io/akuity-portal/automation/) | Manage Akuity Platform resources | `brew install akuity` |
+| [Kargo CLI](https://docs.kargo.io/user-guide/cli/installation) | Manage Kargo resources and promotions | `brew install kargo` |
+| [Argo CD CLI](https://argo-cd.readthedocs.io/en/latest/user-guide/commands/argocd/) | Interact with Argo CD | `brew install argocd` |
+| [Task](https://taskfile.dev/docs/installation) | Run workshop automation tasks | See installation guide |
+| [Git](https://git-scm.com/downloads) | A fork of this repo, inside of your own repo | See installation guide |
+| `envsubst` | Substitute environment variables in YAML | `brew install gettext` |
 
-- An Akuity account: https://akuity.cloud
-- `akuity` CLI installed
-- `task` installed
-- `envsubst` available (brew install gettext)
-- A Kubernetes cluster created with `kind`
-- An Argo CD Instance
-- A Kargo Instance
-- Access to the Argo CD and Kargo control planes
-- An Argo CD Agent registered with the control plane
-- A Kargo Agent registered with the control plane
-- A fork of this repository in your own GitHub account
-- A GitHub Personal Access Token (PAT) with read/write access to your fork
+### macOS
 
----
-
-# 1. Register your agents
-
-First, create an **Argo CD Agent** and register your Kubernetes cluster with the Akuity Platform.
-
-Then create a **Kargo Agent** and register it with the Kargo control plane.
-
-You should have:
-
-```text
-Akuity Platform
-├── Argo CD Instance
-│   └── Argo CD Agent → your Kubernetes cluster
-│
-└── Kargo Instance
-    └── Kargo Agent
-```
-
----
-
-# 2. Login to Akuity
-
-Run:
+Install `envsubst`:
 
 ```bash
-akuity login
+brew install gettext
+echo 'export PATH="/opt/homebrew/opt/gettext/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
----
+Verify the tools:
 
-# 3. Configure your environment
+```bash
+akuity version
+kargo version
+argocd version --client
+task --version
+git --version
+envsubst --version
+```
+
+## 1. Clone the Repository
+
+Clone your workshop repository:
+
+```bash
+git clone https://github.com/<your-github-username>/roche-workshop.git
+cd roche-workshop
+```
+
+## 2. Configure Environment Variables
 
 Copy the example environment file:
 
@@ -80,7 +72,7 @@ Copy the example environment file:
 cp .env.example .env
 ```
 
-Edit `.env` and provide your values:
+Update `.env` with your values:
 
 ```bash
 AKUITY_ARGOCD_INSTANCE=<your-argocd-instance>
@@ -92,17 +84,78 @@ GITOPS_REPO_URL=https://github.com/<your-github-username>/roche-workshop.git
 GITHUB_USERNAME=<your-github-username>
 GITHUB_PAT=<your-github-pat>
 
-ARGOCD_DESTINATION=roche-workshop
-WORKSHOP_NAME=roche-workshop
+ARGOCD_DESTINATION=<your-destination-cluster>
+
+WORKSHOP_NAME=<your-unique-workshop-name>
 ```
 
-The GitHub PAT is used by Kargo to access your GitOps repository.
+### Important
 
-Make sure `.env` is **not committed to Git**.
+`WORKSHOP_NAME` must be **unique for each participant**.
 
----
+For example:
 
-# 4. Validate your configuration
+```bash
+WORKSHOP_NAME=workshop-shivam
+```
+
+This value is used for:
+
+- Kargo Project
+- Kargo Stages
+- Kargo PromotionTask
+- Argo CD ApplicationSet
+- Argo CD Applications
+- Kubernetes namespaces
+- Kargo → Argo CD authorization
+
+The Argo CD `AppProject` remains shared:
+
+```text
+roche-workshop
+```
+
+For example, with:
+
+```bash
+WORKSHOP_NAME=workshop-shivam
+```
+
+the generated resources will be:
+
+```text
+Kargo Project:
+  workshop-shivam
+
+Argo CD ApplicationSet:
+  workshop-shivam
+
+Argo CD Applications:
+  workshop-shivam-nginx-dev
+  workshop-shivam-nginx-test
+  workshop-shivam-nginx-prod
+
+Namespaces:
+  workshop-shivam-dev
+  workshop-shivam-test
+  workshop-shivam-prod
+```
+
+## 3. Authenticate with Akuity
+
+Log in to Akuity Platform:
+
+```bash
+akuity login
+```
+
+Verify your identity:
+
+```bash
+akuity whoami
+```
+
+## 4. Verify Configuration
 
 Run:
 
@@ -110,450 +163,60 @@ Run:
 task check
 ```
 
-You should see:
+This validates that all required environment variables are configured.
 
-```text
-✓ All required variables are set
-```
+## 5. Configure GitHub Access
 
-If a variable is missing, the task will tell you which one needs to be configured.
+The workshop uses a GitHub Personal Access Token to allow Kargo to clone and push to the GitOps repository.
 
----
-
-# 5. Create the Argo CD AppProject
-
-The workshop uses a shared Argo CD AppProject.
-
-Run:
+Set the credentials in `.env`:
 
 ```bash
-task apply-argocd-project
+GITHUB_USERNAME=<your-github-username>
+GITHUB_PAT=<your-github-pat>
 ```
 
-This creates the:
+> **Security:** Never commit `.env` or your GitHub token to the repository.
+
+## 6. Create the Argo CD AppProject
+
+The workshop uses a shared Argo CD AppProject:
 
 ```text
 roche-workshop
 ```
 
-AppProject in Argo CD.
-
----
-
-# 6. Create the Argo CD Applications
-
-The ApplicationSet creates three Argo CD Applications:
-
-```text
-roche-workshop-nginx-dev
-roche-workshop-nginx-test
-roche-workshop-nginx-prod
-```
-
-Run:
+Apply it with:
 
 ```bash
-task apply-applicationset
+task apply-argocd-project
 ```
 
-The Taskfile automatically substitutes the values from `.env` before applying the manifest.
+## 7. Create the Kargo Resources
 
-For example:
-
-```yaml
-repoURL: ${GITOPS_REPO_URL}
-```
-
-is replaced with your actual repository URL.
-
-The resulting Applications track:
-
-```text
-stage/dev
-stage/test
-stage/prod
-```
-
-in your Git repository.
-
-At this point, the stage branches may not exist yet, so the Applications can show an `Unknown` or unhealthy state. This is expected.
-
-Kargo will create and update these branches during promotion.
-
----
-
-# 7. Create the Kargo resources
-
-The workshop uses the following Kargo resources:
-
-```text
-Kargo Project
-    │
-    ├── Warehouse
-    │
-    ├── PromotionTask
-    │
-    └── Stages
-          ├── dev
-          ├── test
-          └── prod
-```
-
-You can create all of them with:
+Create the participant-specific Kargo Project, Warehouse, Stages, credentials, and PromotionTask:
 
 ```bash
 task apply-kargo
 ```
 
-This runs:
-
-```bash
-task apply-kargo-project
-task apply-kargo-secret
-task apply-kargo-warehouse
-task apply-kargo-promotion-task
-task apply-kargo-stages
-```
-
-## Kargo Project
-
-The Kargo Project is created using:
-
-```bash
-task apply-kargo-project
-```
-
-The project name comes from:
-
-```bash
-WORKSHOP_NAME=roche-workshop
-```
-
----
-
-# 8. Configure GitHub credentials
-
-Kargo needs credentials to access your GitOps repository.
-
-These credentials allow Kargo to:
-
-- Read the source configuration from the repository
-- Create environment-specific branches
-- Update those branches during promotion
-- Commit rendered Kubernetes manifests
-- Push changes back to GitHub
-
-The credentials are configured with:
-
-```bash
-task apply-kargo-secret
-```
-
-The GitHub credentials come from your `.env`:
-
-```bash
-GITOPS_REPO_URL=<your repository>
-GITHUB_USERNAME=<your username>
-GITHUB_PAT=<your PAT>
-```
-
-The PAT must have permission to read from and write to the repository.
-
----
-
-# 9. Create the Warehouse
-
-The Warehouse discovers new versions of the NGINX container image.
-
-Run:
-
-```bash
-task apply-kargo-warehouse
-```
-
-The Warehouse watches:
+The resulting Kargo structure is:
 
 ```text
-public.ecr.aws/nginx/nginx
+<WORKSHOP_NAME>
+├── Warehouse
+│   └── nginx
+│
+├── Stage
+│   ├── dev
+│   ├── test
+│   └── prod
+│
+└── PromotionTask
+    └── nginx-promotion
 ```
 
-for versions matching:
-
-```text
-^1.27.0
-```
-
-Once Kargo discovers a new image version, it creates Freight that can be promoted through the pipeline.
-
----
-
-# 10. Create the PromotionTask
-
-The PromotionTask defines what happens when Freight is promoted.
-
-Run:
-
-```bash
-task apply-kargo-promotion-task
-```
-
-The PromotionTask performs the following:
-
-1. Clones the `main` branch.
-2. Checks out the target `stage/<environment>` branch.
-3. Updates the NGINX image version.
-4. Builds the Kustomize manifests.
-5. Writes the rendered manifests to the stage branch.
-6. Commits the changes.
-7. Pushes the branch to GitHub.
-8. Updates the corresponding Argo CD Application to the resulting commit.
-
-The flow is:
-
-```text
-main
- │
- │ Kargo promotion
- ▼
-Kustomize render
- │
- ▼
-stage/dev
-stage/test
-stage/prod
- │
- ▼
-Argo CD
-```
-
----
-
-# 11. Create the deployment stages
-
-Run:
-
-```bash
-task apply-kargo-stages
-```
-
-This creates:
-
-```text
-dev → test → prod
-```
-
-The stages are configured so that:
-
-- `dev` receives Freight directly from the Warehouse.
-- `test` receives Freight promoted from `dev`.
-- `prod` receives Freight promoted from `test`.
-
-The pipeline is now ready.
-
----
-
-# 12. Verify the setup
-
-In the Kargo dashboard, you should see:
-
-```text
-roche-workshop
-└── nginx
-    ├── dev
-    ├── test
-    └── prod
-```
-
-In the Argo CD dashboard, you should see:
-
-```text
-roche-workshop-nginx-dev
-roche-workshop-nginx-test
-roche-workshop-nginx-prod
-```
-
-The Applications may initially show an `Unknown` or unhealthy state because the `stage/*` branches do not exist yet.
-
-These branches are created by Kargo during the first promotion.
-
----
-
-# 13. Your first promotion
-
-Once Freight has been discovered by the Warehouse, promote it through the pipeline.
-
-## Promote to dev
-
-In the Kargo dashboard:
-
-1. Open the `dev` Stage.
-2. Select the available Freight.
-3. Promote the Freight to `dev`.
-
-Kargo will:
-
-- Create/update `stage/dev`
-- Render the Kubernetes manifests
-- Commit them to GitHub
-- Push the branch
-- Update the Argo CD Application
-
-Argo CD will then synchronize the rendered manifests to:
-
-```text
-roche-workshop-dev
-```
-
----
-
-## Promote to test
-
-Once `dev` is healthy:
-
-1. Open the `test` Stage in Kargo.
-2. Select the Freight from `dev`.
-3. Promote it to `test`.
-
-Kargo creates/updates:
-
-```text
-stage/test
-```
-
-and Argo CD deploys the rendered manifests to:
-
-```text
-roche-workshop-test
-```
-
----
-
-## Promote to prod using the CLI
-
-You can also promote Freight using the Kargo CLI.
-
-First authenticate to your Kargo instance as required by your environment.
-
-Then:
-
-```bash
-kargo promote \
-  --project roche-workshop \
-  --stage prod \
-  --freight-alias <freight-alias>
-```
-
-This promotes the selected Freight to:
-
-```text
-prod
-```
-
-Kargo updates:
-
-```text
-stage/prod
-```
-
-and Argo CD deploys the resulting manifests to:
-
-```text
-roche-workshop-prod
-```
-
----
-
-# 14. Final GitOps flow
-
-After completing the workshop, the complete flow looks like this:
-
-```text
-                    GitHub
-                      │
-                      │
-              ┌───────▼───────┐
-              │    Warehouse  │
-              │    NGINX      │
-              └───────┬───────┘
-                      │
-                    Freight
-                      │
-                      ▼
-                 ┌─────────┐
-                 │   dev   │
-                 └────┬────┘
-                      │
-              stage/dev branch
-                      │
-                      ▼
-                 ┌─────────┐
-                 │  ArgoCD │
-                 └────┬────┘
-                      │
-                      ▼
-              Kubernetes / dev
-                      │
-                      │
-                   promote
-                      │
-                      ▼
-                 ┌─────────┐
-                 │  test   │
-                 └────┬────┘
-                      │
-              stage/test branch
-                      │
-                      ▼
-                 ┌─────────┐
-                 │  ArgoCD │
-                 └────┬────┘
-                      │
-                      ▼
-              Kubernetes / test
-                      │
-                      │
-                   promote
-                      │
-                      ▼
-                 ┌─────────┐
-                 │  prod   │
-                 └────┬────┘
-                      │
-              stage/prod branch
-                      │
-                      ▼
-                 ┌─────────┐
-                 │  ArgoCD │
-                 └────┬────┘
-                      │
-                      ▼
-              Kubernetes / prod
-```
-
-The key idea is:
-
-```text
-Kargo controls promotion.
-GitHub stores the desired manifests.
-Argo CD deploys the manifests.
-Kubernetes runs the application.
-```
-
----
-
-# Useful Taskfile commands
-
-Check configuration:
-
-```bash
-task check
-```
-
-Apply the shared Argo CD AppProject:
-
-```bash
-task apply-argocd-project
-```
+## 8. Create the Argo CD ApplicationSet
 
 Apply the ApplicationSet:
 
@@ -561,30 +224,370 @@ Apply the ApplicationSet:
 task apply-applicationset
 ```
 
-Apply individual Kargo resources:
+The ApplicationSet creates one Argo CD Application for each environment:
 
-```bash
-task apply-kargo-project
-task apply-kargo-secret
-task apply-kargo-warehouse
-task apply-kargo-promotion-task
-task apply-kargo-stages
+```text
+<WORKSHOP_NAME>-nginx-dev
+<WORKSHOP_NAME>-nginx-test
+<WORKSHOP_NAME>-nginx-prod
 ```
 
-Apply all Kargo resources:
+Each Application points to the corresponding Kargo-managed Git branch:
 
-```bash
-task apply-kargo
+```text
+stage/dev
+stage/test
+stage/prod
 ```
 
-Apply the Argo CD Application that manages Kargo resources:
+## 9. Application Deployment Flow
 
-```bash
-task apply-kargo-application
+The NGINX application is deployed through three environments.
+
+### Development
+
+```text
+Kargo dev
+   ↓
+stage/dev
+   ↓
+Argo CD
+   ↓
+Kubernetes
 ```
 
-Set up the workshop:
+### Test
+
+```text
+Kargo test
+   ↓
+stage/test
+   ↓
+Argo CD
+   ↓
+Kubernetes
+```
+
+### Production
+
+```text
+Kargo prod
+   ↓
+stage/prod
+   ↓
+Argo CD
+   ↓
+Kubernetes
+```
+
+## 10. Promote an Image
+
+List available Freight:
 
 ```bash
-task setup
+kargo get freight --project <your-workshop-name>
+```
+
+Promote Freight to `dev`:
+
+```bash
+kargo promote \
+  --project <your-workshop-name> \
+  --stage dev \
+  --freight-alias <freight-alias>
+```
+
+After the promotion completes, Kargo will:
+
+1. Clone the `main` branch.
+2. Clone/create the `stage/dev` branch.
+3. Update the NGINX image.
+4. Build the Kustomize overlay.
+5. Commit the rendered manifests.
+6. Push the changes to GitHub.
+7. Update the Argo CD Application.
+8. Argo CD synchronizes the application to Kubernetes.
+
+## 11. Promote Through the Environments
+
+After validating `dev`, promote the same Freight to `test`:
+
+```bash
+kargo promote \
+  --project <your-workshop-name> \
+  --stage test \
+  --freight-alias <freight-alias>
+```
+
+Then promote it to `prod`:
+
+```bash
+kargo promote \
+  --project <your-workshop-name> \
+  --stage prod \
+  --freight-alias <freight-alias>
+```
+
+The same artifact therefore moves through:
+
+```text
+        ┌─────────┐
+        │ GitHub  │
+        │  main   │
+        └────┬────┘
+             │
+             ▼
+      ┌─────────────┐
+      │    Kargo    │
+      │  Warehouse  │
+      └──────┬──────┘
+             │
+             ▼
+          ┌─────┐
+          │ dev │
+          └──┬──┘
+             │
+             ▼
+          ┌──────┐
+          │ test │
+          └──┬───┘
+             │
+             ▼
+          ┌──────┐
+          │ prod │
+          └──────┘
+             │
+             ▼
+        ┌──────────┐
+        │  Argo CD │
+        └────┬─────┘
+             │
+             ▼
+        ┌──────────┐
+        │Kubernetes│
+        └──────────┘
+```
+
+## 12. Verify in Argo CD
+
+List the applications:
+
+```bash
+argocd app list
+```
+
+You should see:
+
+```text
+<WORKSHOP_NAME>-nginx-dev
+<WORKSHOP_NAME>-nginx-test
+<WORKSHOP_NAME>-nginx-prod
+```
+
+Check an application:
+
+```bash
+argocd app get <WORKSHOP_NAME>-nginx-dev
+```
+
+You can also inspect the applications from the Akuity Platform UI.
+
+## 13. Verify in Kubernetes
+
+The destination cluster is configured through:
+
+```bash
+ARGOCD_DESTINATION=<your-destination-cluster>
+```
+
+The application is deployed into:
+
+```text
+<WORKSHOP_NAME>-dev
+<WORKSHOP_NAME>-test
+<WORKSHOP_NAME>-prod
+```
+
+For example:
+
+```bash
+kubectl get pods -n <WORKSHOP_NAME>-dev
+```
+
+Check the Service:
+
+```bash
+kubectl get svc -n <WORKSHOP_NAME>-dev
+```
+
+The NGINX Service uses `NodePort`, but Kubernetes dynamically allocates the NodePort. This avoids hardcoded port collisions between deployments.
+
+## 14. Repository Structure
+
+```text
+.
+├── app/
+│   ├── base/
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   └── kustomization.yaml
+│   │
+│   └── overlays/
+│       ├── dev/
+│       │   ├── configmap.yaml
+│       │   ├── kustomization.yaml
+│       │   └── namespace.yaml
+│       │
+│       ├── test/
+│       │   ├── configmap.yaml
+│       │   ├── kustomization.yaml
+│       │   └── namespace.yaml
+│       │
+│       └── prod/
+│           ├── configmap.yaml
+│           ├── kustomization.yaml
+│           └── namespace.yaml
+│
+├── argocd/
+│   ├── app-project.yaml
+│   ├── applicationset.yaml
+│   └── kargo-application.yaml
+│
+├── kargo/
+│   ├── project.yaml
+│   ├── secret.yaml
+│   ├── warehouse.yaml
+│   ├── promotion-task.yaml
+│   └── stages.yaml
+│
+├── taskfile.yaml
+├── .env.example
+└── README.md
+```
+
+## 15. Useful Commands
+
+### Kargo
+
+List Projects:
+
+```bash
+kargo get projects
+```
+
+List Warehouses:
+
+```bash
+kargo get warehouses --project <your-workshop-name>
+```
+
+List Stages:
+
+```bash
+kargo get stages --project <your-workshop-name>
+```
+
+List Freight:
+
+```bash
+kargo get freight --project <your-workshop-name>
+```
+
+List Promotions:
+
+```bash
+kargo get promotions --project <your-workshop-name>
+```
+
+### Argo CD
+
+List applications:
+
+```bash
+argocd app list
+```
+
+Get application status:
+
+```bash
+argocd app get <WORKSHOP_NAME>-nginx-dev
+```
+
+View application history:
+
+```bash
+argocd app history <WORKSHOP_NAME>-nginx-dev
+```
+
+### Kubernetes
+
+```bash
+kubectl get pods -A
+kubectl get applications -n argocd
+kubectl get svc -n <WORKSHOP_NAME>-dev
+```
+
+## 16. Cleanup
+
+Remove the workshop resources when finished:
+
+```bash
+task delete
+```
+
+Or remove the participant-specific Kargo Project and Argo CD resources manually.
+
+Because each participant uses a unique `WORKSHOP_NAME`, cleanup only affects that participant's resources.
+
+## What This Workshop Demonstrates
+
+By the end of the workshop, you will have seen:
+
+- **GitHub** as the GitOps source
+- **Kargo Warehouse** discovering new application versions
+- **Kargo Freight** representing promotable artifacts
+- **Kargo Stages** representing `dev → test → prod`
+- **Kargo PromotionTasks** updating Git manifests
+- **Git branches** representing environment state
+- **Kustomize** rendering environment-specific manifests
+- **Argo CD ApplicationSet** creating environment Applications
+- **Argo CD** synchronizing Git state to Kubernetes
+- **Akuity Platform** providing the managed Argo CD/Kargo environment
+
+The complete flow is:
+
+```text
+New NGINX image
+      ↓
+Kargo Warehouse
+      ↓
+Freight
+      ↓
+Kargo dev
+      ↓
+Git: stage/dev
+      ↓
+Argo CD
+      ↓
+Kubernetes
+
+      ↓ promote same Freight
+
+Kargo test
+      ↓
+Git: stage/test
+      ↓
+Argo CD
+      ↓
+Kubernetes
+
+      ↓ promote same Freight
+
+Kargo prod
+      ↓
+Git: stage/prod
+      ↓
+Argo CD
+      ↓
+Kubernetes
 ```
