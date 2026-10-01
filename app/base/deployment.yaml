@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: public.ecr.aws/nginx/nginx:1.27.0
+          image: public.ecr.aws/nginx/nginx:placeholder
           ports:
             - containerPort: 80
           volumeMounts:

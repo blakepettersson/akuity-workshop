@@ -164,6 +164,16 @@ tasks:
       - task: apply-argocd-project
       - task: apply-applicationset
       - task: apply-kargo
+  
+  port-forward:
+    desc: "Port-forward to a stage's nginx Service (usage: task port-forward STAGE=dev)"
+    vars:
+      STAGE: '{{.STAGE | default "dev"}}'
+      PORT: '{{.PORT | default "8080"}}'
+    cmds:
+      - echo "Open http://localhost:{{.PORT}}"
+      - kubectl port-forward svc/nginx {{.PORT}}:80 -n "$WORKSHOP_NAME-{{.STAGE}}"
+
 
   argocd-login:
     desc: Log in to your Argo CD instance

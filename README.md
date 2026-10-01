@@ -98,6 +98,32 @@ The pipeline is ready. Freight discovered by the Warehouse can now be promoted t
 
 After each promotion, Kargo pushes to `stage/<env>` and syncs the matching Argo CD Application.
 
+### 8. Check the app
+
+Each stage runs in its own namespace, `<WORKSHOP_NAME>-<stage>`. Port-forward to a stage's Service:
+
+```bash
+task port-forward STAGE=dev
+```
+
+Or with `kubectl` directly:
+
+```bash
+kubectl port-forward svc/nginx 8080:80 -n <WORKSHOP_NAME>-dev
+```
+
+Open http://localhost:8080. You should see **NGINX - DEV**.
+
+Check which image is running:
+
+```bash
+kubectl get deploy nginx -n <WORKSHOP_NAME>-dev \
+-o jsonpath='{.spec.template.spec.containers[0].image}'
+```
+
+The tag should match the Freight you promoted. Repeat for `test` and `prod`, using a different local port for each, for example `task port-forward STAGE=test PORT=8081`.
+
+
 ## Repository Structure
 
 ```text

@@ -11,6 +11,6 @@ data:
     </head>
     <body>
       <h1>NGINX - TEST</h1>
-      <p>Deployed through Kargo → Argo CD</p>
+      <p>Deployed through Kargo --> Argo CD</p>
     </body>
     </html>
