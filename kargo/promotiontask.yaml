@@ -46,6 +46,12 @@ spec:
       config:
         path: ${{ vars.srcPath }}/app/overlays/${{ ctx.stage }}
         outPath: ${{ vars.outPath }}
+    
+    - uses: ${WORKSHOP_NAME}-hello
+      as: hello
+      config:
+        stage: ${{ ctx.stage }}
+        tag: ${{ imageFrom(vars.imageRepo).Tag }}
 
     - uses: git-commit
       as: commit

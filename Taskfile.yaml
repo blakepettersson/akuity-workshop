@@ -144,6 +144,19 @@ tasks:
       - task: apply-kargo-warehouse
       - task: apply-kargo-promotion-task
       - task: apply-kargo-stages
+  
+  apply-kargo-custom-step:
+    desc: Apply Kargo CustomPromotionStep
+    deps:
+      - check
+    cmds:
+      - |
+        envsubst '${WORKSHOP_NAME}' < kargo/custom-step.yaml | \
+          akuity kargo apply \
+            -f - \
+            --name "$AKUITY_KARGO_INSTANCE" \
+            --org-name="$AKUITY_ORG_NAME"
+
 
   apply-kargo-application:
     desc: Apply Kargo Application
@@ -151,7 +164,7 @@ tasks:
       - check
     cmds:
       - |
-        envsubst < argocd/kargo-application.yaml | \
+        envsubst < argocd/kargo-resources-application.yaml | \
           akuity argocd apply \
             -f - \
             --name "$AKUITY_ARGOCD_INSTANCE" \

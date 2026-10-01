@@ -1,0 +1,16 @@
+apiVersion: ee.kargo.akuity.io/v1alpha1
+kind: CustomPromotionStep
+
+metadata:
+  name: ${WORKSHOP_NAME}-hello
+
+spec:
+  image: alpine:3.20
+  command:
+    - sh
+    - -c
+    - echo "message=Hello from ${{ config.stage }}, promoting ${{ config.tag }}" > "$KARGO_OUTPUT"
+  output:
+    source:
+      type: Pipe
+      format: KeyValue

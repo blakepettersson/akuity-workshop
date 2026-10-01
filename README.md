@@ -135,3 +135,53 @@ The tag should match the Freight you promoted. Repeat for `test` and `prod`, usi
 ├── Taskfile.yaml
 └── .env.example
 ```
+
+# Bonus tasks
+
+### Add a custom promotion step
+
+Kargo on the Akuity Platform can run your own container as a promotion step, using a [`CustomPromotionStep`](https://docs.kargo.io/user-guide/reference-docs/promotion-steps/custom-steps). The one in [kargo/custom-step.yaml](kargo/custom-step.yaml) runs `alpine` and prints a message with the stage and image tag.
+
+1. Register the custom step:
+
+   ```bash
+   task apply-kargo-custom-step
+   ```
+
+2. Add it to [kargo/promotiontask.yaml](kargo/promotiontask.yaml), between the `kustomize-build` and `git-commit` steps:
+
+   ```yaml
+       - uses: ${WORKSHOP_NAME}-hello
+         as: hello
+         config:
+           stage: ${{ ctx.stage }}
+           tag: ${{ imageFrom(vars.imageRepo).Tag }}
+   ```
+
+   Leave `${WORKSHOP_NAME}` as it is. The task fills it in from your `.env`.
+
+3. Apply the updated PromotionTask:
+
+   ```bash
+   task apply-kargo-promotion-task
+   ```
+
+4. Promote a Freight to `dev`. In the Kargo UI, open the Promotion: the `hello` step runs after `kustomize-build`, and its output shows `Hello from dev, promoting <tag>`.
+
+> Bonus: change the `git-commit` message to `${{ task.outputs.hello.message }}`, apply again, and promote. Your `stage/dev` commit on GitHub now uses the message from your custom step.
+
+### Use Argo CD to manage your Kargo resources
+
+So far you've applied your Kargo resources with `akuity kargo apply`. In this task, Argo CD syncs them from Git instead.
+
+1. **Register your Kargo instance with Argo CD and create the Application.** Follow [Managing Kargo resources with Argo CD](https://docs.akuity.io/kargo/managing-instances/managing-kargo-resources-with-argocd). Point the Application at the `kargo/` folder of your fork. You can use [argocd/kargo-resources-application.yaml](argocd/kargo-resources-application.yaml) as a starting point.
+
+2. **Replace the placeholders.** Argo CD applies files exactly as they are in Git, so it can't fill in `${...}` values from your `.env`. In the files under `kargo/`, replace `${WORKSHOP_NAME}` and `${GITOPS_REPO_URL}` with your real values, then commit and push to your fork.
+
+3. **Manage the Git credentials secret.** Don't commit `secret.yaml` with your PAT in it. Set up the secret by following [Secrets](https://docs.akuity.io/argocd/managing-instances/settings/features/secrets).
+
+4. **Sync and test.** Sync the Application in the Argo CD UI. Then change `discoveryLimit` in `kargo/warehouse.yaml` from `5` to `3`, commit and push, and watch Argo CD apply the change to Kargo.
+
+### Turn on auto-promotion
+
+Set up auto-promotion for your `dev` and `test` stages by following [Promotion policies](https://docs.kargo.io/user-guide/how-to-guides/working-with-projects#promotion-policies) in the Kargo docs.
