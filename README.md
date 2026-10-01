@@ -28,10 +28,10 @@ Kargo is responsible for promoting container image versions between environments
 
 Before starting, make sure you have:
 
-- An Akuity account: https://training.akuity.cloud
+- An Akuity account: https://akuity.cloud
 - `akuity` CLI installed
 - `task` installed
-- `envsubst` available
+- `envsubst` available (brew install gettext)
 - A Kubernetes cluster created with `kind`
 - An Argo CD Instance
 - A Kargo Instance

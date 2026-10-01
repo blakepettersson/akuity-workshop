@@ -44,7 +44,7 @@ spec:
 
     - uses: kustomize-build
       config:
-        path: ${{ vars.srcPath }}/app/envs/${{ ctx.stage }}
+        path: ${{ vars.srcPath }}/app/overlays/${{ ctx.stage }}
         outPath: ${{ vars.outPath }}
 
     - uses: git-commit
