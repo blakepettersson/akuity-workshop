@@ -2,11 +2,11 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 
 metadata:
-  name: kargo-roche-workshop
+  name: kargo-akuity-workshop
   namespace: argocd
 
 spec:
-  project: roche-workshop
+  project: akuity-workshop
 
   source:
     repoURL: ${GITOPS_REPO_URL}
@@ -14,7 +14,7 @@ spec:
 
   destination:
     name: ${ARGOCD_DESTINATION}
-    namespace: roche-workshop
+    namespace: akuity-workshop
 
   syncPolicy:
     syncOptions:

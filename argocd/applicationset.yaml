@@ -21,7 +21,7 @@ spec:
         kargo.akuity.io/authorized-stage: ${WORKSHOP_NAME}:{{stage}}
 
     spec:
-      project: roche-workshop
+      project: akuity-workshop
 
       source:
         repoURL: ${GITOPS_REPO_URL}
