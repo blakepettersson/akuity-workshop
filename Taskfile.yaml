@@ -1,0 +1,146 @@
+version: '3'
+
+dotenv:
+  - .env
+
+tasks:
+
+  check:
+    desc: Check required environment variables
+    cmds:
+      - |
+        set -e
+
+        for var in \
+          AKUITY_ARGOCD_INSTANCE \
+          AKUITY_ORG_NAME \
+          GITOPS_REPO_URL \
+          GITHUB_USERNAME \
+          GITHUB_PAT \
+          ARGOCD_DESTINATION
+        do
+          if [ -z "$(printenv "$var")" ]; then
+            echo "ERROR: $var is not set"
+            exit 1
+          fi
+        done
+
+        echo "✓ All required variables are set"
+
+  apply-argocd-project:
+    desc: Apply shared Argo CD AppProject
+    deps:
+      - check
+    cmds:
+      - |
+        akuity argocd apply \
+          -f argocd/app-project.yaml \
+          --name "$AKUITY_ARGOCD_INSTANCE" \
+          --org-name="$AKUITY_ORG_NAME"
+
+  apply-applicationset:
+    desc: Apply Argo CD ApplicationSet
+    deps:
+      - check
+    cmds:
+      - |
+        envsubst < argocd/applicationset.yaml | \
+          akuity argocd apply \
+            -f - \
+            --name "$AKUITY_ARGOCD_INSTANCE" \
+            --org-name="$AKUITY_ORG_NAME"
+  
+  apply-kargo-project:
+    desc: Apply Kargo Project
+    deps:
+      - check
+    cmds:
+      - |
+        envsubst < kargo/project.yaml | \
+          akuity kargo apply \
+            -f - \
+            --name "$AKUITY_KARGO_INSTANCE" \
+            --org-name="$AKUITY_ORG_NAME"
+  
+  apply-kargo-secret:
+    desc: Apply Kargo Git credentials
+    deps:
+      - check
+    cmds:
+      - |
+        envsubst < kargo/secret.yaml | \
+          akuity kargo apply \
+            -f - \
+            --name "$AKUITY_KARGO_INSTANCE" \
+            --org-name="$AKUITY_ORG_NAME"
+  
+  apply-kargo-warehouse:
+    desc: Apply Kargo Warehouse
+    deps:
+      - check
+    cmds:
+      - |
+        envsubst < kargo/warehouse.yaml | \
+          akuity kargo apply \
+            -f - \
+            --name "$AKUITY_KARGO_INSTANCE" \
+            --org-name="$AKUITY_ORG_NAME"
+  
+  apply-kargo-promotion-task:
+    desc: Apply Kargo PromotionTask
+    deps:
+      - check
+    cmds:
+      - |
+        envsubst < kargo/promotion-task.yaml | \
+          akuity kargo apply \
+            -f - \
+            --name "$AKUITY_KARGO_INSTANCE" \
+            --org-name="$AKUITY_ORG_NAME"
+  
+  apply-kargo-stages:
+    desc: Apply Kargo Stages
+    deps:
+      - check
+    cmds:
+      - |
+        envsubst < kargo/stages.yaml | \
+          akuity kargo apply \
+            -f - \
+            --name "$AKUITY_KARGO_INSTANCE" \
+            --org-name="$AKUITY_ORG_NAME"
+    
+  apply-kargo:
+    desc: Apply all Kargo resources
+    cmds:
+      - task: apply-kargo-project
+      - task: apply-kargo-secret
+      - task: apply-kargo-warehouse
+      - task: apply-kargo-promotion-task
+      - task: apply-kargo-stages
+
+  apply-kargo-application:
+    desc: Apply Kargo Application
+    deps:
+      - check
+    cmds:
+      - |
+        envsubst < argocd/kargo-application.yaml | \
+          akuity argocd apply \
+            -f - \
+            --name "$AKUITY_ARGOCD_INSTANCE" \
+            --org-name="$AKUITY_ORG_NAME"
+
+  setup:
+    desc: Set up workshop
+    cmds:
+      - task: check
+      - task: apply-argocd-project
+      - task: apply-applicationset
+      - task: apply-kargo
+
+
+
+##kargo login gaq379139gqc393z.kargo.akuity.cloud 
+
+## kargo promote --project <kargo project name> --stage prod --freight-alias <alias-name>

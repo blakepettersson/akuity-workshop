@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: kargo-roche-workshop
+  namespace: argocd
+
+spec:
+  project: roche-workshop
+
+  source:
+    repoURL: ${GITOPS_REPO_URL}
+    path: kargo
+
+  destination:
+    name: ${ARGOCD_DESTINATION}
+    namespace: roche-workshop
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

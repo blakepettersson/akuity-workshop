@@ -1,0 +1,13 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+
+metadata:
+  name: nginx
+  namespace: ${WORKSHOP_NAME}
+
+spec:
+  subscriptions:
+    - image:
+        repoURL: public.ecr.aws/nginx/nginx
+        constraint: ^1.27.0
+        discoveryLimit: 5

@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+
+metadata:
+  name: roche-workshop
+  namespace: argocd
+
+spec:
+  generators:
+    - list:
+        elements:
+          - stage: dev
+          - stage: test
+          - stage: prod
+
+  template:
+    metadata:
+      name: roche-workshop-nginx-{{stage}}
+
+      annotations:
+        kargo.akuity.io/authorized-stage: roche-workshop:{{stage}}
+
+    spec:
+      project: roche-workshop
+
+      source:
+        repoURL: ${GITOPS_REPO_URL}
+        targetRevision: stage/{{stage}}
+        path: .
+
+      destination:
+        name: ${ARGOCD_DESTINATION}
+        namespace: roche-workshop-{{stage}}
+
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true

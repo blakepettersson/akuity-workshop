@@ -1,0 +1,66 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+
+metadata:
+  name: dev
+  namespace: ${WORKSHOP_NAME}
+
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: nginx
+      sources:
+        direct: true
+
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: nginx-promotion
+
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+
+metadata:
+  name: test
+  namespace: ${WORKSHOP_NAME}
+
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: nginx
+      sources:
+        stages:
+          - dev
+
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: nginx-promotion
+
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+
+metadata:
+  name: prod
+  namespace: ${WORKSHOP_NAME}
+
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: nginx
+      sources:
+        stages:
+          - test
+
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: nginx-promotion

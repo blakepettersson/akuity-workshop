@@ -1,0 +1,67 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+
+metadata:
+  name: nginx-promotion
+  namespace: ${WORKSHOP_NAME}
+
+spec:
+  vars:
+    - name: gitopsRepo
+      value: ${GITOPS_REPO_URL}
+
+    - name: imageRepo
+      value: public.ecr.aws/nginx/nginx
+
+    - name: srcPath
+      value: ./src
+
+    - name: outPath
+      value: ./out
+
+  steps:
+    - uses: git-clone
+      config:
+        repoURL: ${{ vars.gitopsRepo }}
+        checkout:
+          - branch: main
+            path: ${{ vars.srcPath }}
+          - branch: stage/${{ ctx.stage }}
+            create: true
+            path: ${{ vars.outPath }}
+
+    - uses: git-clear
+      config:
+        path: ${{ vars.outPath }}
+
+    - uses: kustomize-set-image
+      as: update-image
+      config:
+        path: ${{ vars.srcPath }}/app/base
+        images:
+          - image: ${{ vars.imageRepo }}
+            tag: ${{ imageFrom(vars.imageRepo).Tag }}
+
+    - uses: kustomize-build
+      config:
+        path: ${{ vars.srcPath }}/app/envs/${{ ctx.stage }}
+        outPath: ${{ vars.outPath }}
+
+    - uses: git-commit
+      as: commit
+      config:
+        path: ${{ vars.outPath }}
+        message: ${{ outputs['update-image'].commitMessage }}
+
+    - uses: git-push
+      config:
+        path: ${{ vars.outPath }}
+        branch: stage/${{ ctx.stage }}
+
+    - uses: argocd-update
+      config:
+        apps:
+          - name: ${WORKSHOP_NAME}-nginx-${{ ctx.stage }}
+            sources:
+              - repoURL: ${{ vars.gitopsRepo }}
+                desiredRevision: ${{ outputs.commit.commit }}
