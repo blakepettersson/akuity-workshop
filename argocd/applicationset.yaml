@@ -2,7 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 
 metadata:
-  name: roche-workshop
+  name: ${WORKSHOP_NAME}
   namespace: argocd
 
 spec:
@@ -15,10 +15,10 @@ spec:
 
   template:
     metadata:
-      name: roche-workshop-nginx-{{stage}}
+      name: ${WORKSHOP_NAME}-nginx-{{stage}}
 
       annotations:
-        kargo.akuity.io/authorized-stage: roche-workshop:{{stage}}
+        kargo.akuity.io/authorized-stage: ${WORKSHOP_NAME}:{{stage}}
 
     spec:
       project: roche-workshop
@@ -30,7 +30,7 @@ spec:
 
       destination:
         name: ${ARGOCD_DESTINATION}
-        namespace: roche-workshop-{{stage}}
+        namespace: ${WORKSHOP_NAME}-{{stage}}
 
       syncPolicy:
         syncOptions:

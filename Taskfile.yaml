@@ -44,6 +44,8 @@ tasks:
       - check
     cmds:
       - |
+        set -euo pipefail
+        
         envsubst < argocd/applicationset.yaml | \
           akuity argocd apply \
             -f - \

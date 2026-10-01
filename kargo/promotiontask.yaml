@@ -35,7 +35,7 @@ spec:
         path: ${{ vars.outPath }}
 
     - uses: kustomize-set-image
-      as: update-image
+      as: update
       config:
         path: ${{ vars.srcPath }}/app/base
         images:
@@ -56,7 +56,6 @@ spec:
     - uses: git-push
       config:
         path: ${{ vars.outPath }}
-        branch: stage/${{ ctx.stage }}
 
     - uses: argocd-update
       config:
@@ -64,4 +63,5 @@ spec:
           - name: ${WORKSHOP_NAME}-nginx-${{ ctx.stage }}
             sources:
               - repoURL: ${{ vars.gitopsRepo }}
-                desiredRevision: ${{ outputs.commit.commit }}
+                desiredRevision: ${{ task.outputs.commit.commit }}
+                updateTargetRevision: true

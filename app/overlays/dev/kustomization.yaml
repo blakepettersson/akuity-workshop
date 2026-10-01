@@ -4,12 +4,3 @@ kind: Kustomization
 resources:
   - ../../base
   - configmap.yaml
-
-patches:
-  - target:
-      kind: Service
-      name: nginx
-    patch: |-
-      - op: replace
-        path: /spec/ports/0/nodePort
-        value: 32080
