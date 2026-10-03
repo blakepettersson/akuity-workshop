@@ -185,3 +185,19 @@ So far you've applied your Kargo resources with `akuity kargo apply`. In this ta
 ### Turn on auto-promotion
 
 Set up auto-promotion for your `dev` and `test` stages by following [Promotion policies](https://docs.kargo.io/user-guide/how-to-guides/working-with-projects#promotion-policies) in the Kargo docs.
+
+### Send a notification from a promotion
+
+Add a [`send-message`](https://docs.kargo.io/user-guide/reference-docs/promotion-steps/send-message) step to your PromotionTask to post to Slack or email when a promotion runs.
+
+### Update a ServiceNow ticket
+
+Use [`snow-update`](https://docs.kargo.io/user-guide/reference-docs/promotion-steps/snow-update) (and `snow-create`) in your PromotionTask to create and update a ServiceNow ticket as part of each promotion.
+
+### Verify a Stage with an AnalysisTemplate
+
+Add an [`AnalysisTemplate`](https://docs.kargo.io/user-guide/reference-docs/analysis-templates) to a Stage's `verification` so Kargo runs checks after each promotion. Freight that fails verification can't move on to the next Stage.
+
+### Blue-green deployments with Kargo
+
+Try [bluegreen-demo](https://github.com/shimagrawal/bluegreen-demo): a blue-green release driven by Kargo, using two Deployments and Service selectors instead of Argo Rollouts.
